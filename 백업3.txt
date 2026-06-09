@@ -177,30 +177,6 @@ small {
 .result-row.total { background: #1B4332; margin-top: 4px; }
 .result-row.total span { color: white !important; font-weight: 600; }
 
-/* 월 급여 일할계산기 */
-.item-row { display: flex; gap: 8px; align-items: center; }
-.item-row .name { flex: 1.2; text-align: left; }
-.item-row .amount { flex: 1; }
-.item-row .del { flex: 0 0 44px; width: 44px; height: 3rem; padding: 0; margin: 0; background: #f9f9f9; color: #999; border: 1px solid #ddd; border-radius: 10px; font-size: 1.3rem; font-weight: 400; }
-.item-row .del:hover { background: #fde8e8; color: #c0392b; }
-.add-btn { background: #e8f5ee; color: #1B4332; border: 1px dashed #1B4332; padding: 11px; border-radius: 10px; font-size: 0.9rem; margin: 0; }
-.add-btn:hover { background: #dcefe3; }
-.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.cal-head .count { font-size: 0.85rem; color: #1B4332; font-weight: 600; }
-.toggle-all { background: white; color: #333; border: 1px solid #ddd; padding: 7px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; margin: 0; }
-.toggle-all:hover { background: #f0f0f0; }
-.calendar { border: 1px solid #e0e0e0; border-radius: 12px; padding: 10px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.cal-dow { text-align: center; font-size: 0.75rem; font-weight: 600; padding: 4px 0; color: #999; }
-.cal-dow.sun { color: #d94a4a; }
-.cal-dow.sat { color: #3a6ea5; }
-.cal-day { aspect-ratio: 1 / 1; border: 1px solid #e0e0e0; border-radius: 8px; background: white; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; }
-.cal-day.empty { border: none; background: transparent; cursor: default; }
-.cal-day.sun { color: #d94a4a; }
-.cal-day.sat { color: #3a6ea5; }
-.cal-day.on { background: #1B4332; color: white !important; border-color: #1B4332; font-weight: 600; }
-.cal-day:not(.empty):not(.on):hover { background: #f0f0f0; }
-
   </style>
 </head>
 
@@ -210,7 +186,6 @@ small {
   <button class="nav-btn" onclick="showPage('tax')">종합소득세 계산기</button>
   <button class="nav-btn" onclick="showPage('leave')">연차수당 계산기</button>
   <button class="nav-btn" onclick="showPage('retirement')">퇴직금 계산기</button>
-  <button class="nav-btn" onclick="showPage('daily')">월 급여 일할계산기</button>
 </nav>
 
 <!-- 종합소득세 계산기 -->
@@ -341,44 +316,6 @@ small {
           <div class="result-row total"><span>실수령액</span><span id="ret-total"></span></div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- 월 급여 일할계산기 -->
-<div id="page-daily" style="display:none;">
-  <div class="calc-card">
-    <h1>월 급여 일할계산기</h1>
-    <p class="calc-subtitle">근무일수를 기준으로 급여를 일할 계산합니다 (30일 기준)</p>
-    <form>
-      <div>
-        <label>계산 대상 월</label>
-        <input type="month" id="d-month" />
-      </div>
-      <div>
-        <label>월 기본급</label>
-        <input type="text" id="d-base" placeholder="예: 3,000,000" oninput="fmtInput(this)" />
-      </div>
-      <div>
-        <label>수당</label>
-        <small> 식대 등 </small>
-        <div id="d-items" style="display:flex; flex-direction:column; gap:8px; margin:8px 0;"></div>
-        <button type="button" class="add-btn" onclick="addAllowance()">+ 항목 추가</button>
-      </div>
-      <div>
-        <label>근무일 체크</label>
-        <small>실제 근무한 날만 선택하세요. (기본값: 전체 선택)</small>
-        <div class="cal-head" style="margin-top:8px;">
-          <span class="count" id="d-count">근무일: 0일</span>
-          <button type="button" class="toggle-all" id="d-toggle" onclick="toggleAllDays()">전체 해제</button>
-        </div>
-        <div class="calendar"><div class="cal-grid" id="d-grid"></div></div>
-      </div>
-      <button type="button" onclick="calculateDaily()">계산하기</button>
-    </form>
-    <div class="result-section" id="d-result" style="display:none;">
-      <p class="result-label">계산 결과</p>
-      <div class="result-list" id="d-result-list"></div>
     </div>
   </div>
 </div>
@@ -608,127 +545,14 @@ function showPage(page) {
   document.getElementById('page-tax').style.display = page === 'tax' ? 'block' : 'none';
   document.getElementById('page-leave').style.display = page === 'leave' ? 'block' : 'none';
   document.getElementById('page-retirement').style.display = page === 'retirement' ? 'block' : 'none';
-  document.getElementById('page-daily').style.display = page === 'daily' ? 'block' : 'none';
   document.querySelectorAll('.nav-btn').forEach((btn, i) => {
     btn.classList.toggle('active',
       (page === 'tax' && i === 0) ||
       (page === 'leave' && i === 1) ||
-      (page === 'retirement' && i === 2) ||
-      (page === 'daily' && i === 3)
+      (page === 'retirement' && i === 2)
     );
   });
 }
-
-// ===== 월 급여 일할계산기 =====
-const D_BASE_DAYS = 30;   // 일할 기준 일수 (30일 고정)
-let dSelected = new Set();
-
-function addAllowance(name, amount) {
-  const row = document.createElement('div');
-  row.className = 'item-row';
-  row.innerHTML =
-    '<input type="text" class="name" placeholder="항목명 (예: 식대)" />' +
-    '<input type="text" class="amount" placeholder="금액" oninput="fmtInput(this)" />' +
-    '<button type="button" class="del" onclick="this.parentElement.remove()">&times;</button>';
-  if (name) row.querySelector('.name').value = name;
-  if (amount) row.querySelector('.amount').value = amount;
-  document.getElementById('d-items').appendChild(row);
-}
-
-function buildCalDaily() {
-  const [year, month] = document.getElementById('d-month').value.split('-').map(Number);
-  const total = new Date(year, month, 0).getDate();
-  const firstDow = new Date(year, month - 1, 1).getDay();
-
-  dSelected = new Set();
-  for (let d = 1; d <= total; d++) dSelected.add(d);   // 기본: 전체 선택
-
-  const grid = document.getElementById('d-grid');
-  grid.innerHTML = '';
-  ['일','월','화','수','목','금','토'].forEach((dw, i) => {
-    const el = document.createElement('div');
-    el.className = 'cal-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
-    el.textContent = dw;
-    grid.appendChild(el);
-  });
-  for (let i = 0; i < firstDow; i++) {
-    const b = document.createElement('div');
-    b.className = 'cal-day empty';
-    grid.appendChild(b);
-  }
-  for (let d = 1; d <= total; d++) {
-    const dow = new Date(year, month - 1, d).getDay();
-    const btn = document.createElement('div');
-    btn.className = 'cal-day on' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
-    btn.textContent = d;
-    btn.onclick = () => {
-      if (dSelected.has(d)) { dSelected.delete(d); btn.classList.remove('on'); }
-      else { dSelected.add(d); btn.classList.add('on'); }
-      dUpdateCount();
-    };
-    grid.appendChild(btn);
-  }
-  dUpdateCount();
-  document.getElementById('d-toggle').textContent = '전체 해제';
-}
-
-function dUpdateCount() {
-  document.getElementById('d-count').textContent = '근무일: ' + dSelected.size + '일';
-}
-
-function toggleAllDays() {
-  const btn = document.getElementById('d-toggle');
-  const days = document.querySelectorAll('#d-grid .cal-day:not(.empty)');
-  if (dSelected.size > 0) {
-    dSelected.clear();
-    days.forEach(el => el.classList.remove('on'));
-    btn.textContent = '전체 선택';
-  } else {
-    days.forEach((el, i) => { dSelected.add(i + 1); el.classList.add('on'); });
-    btn.textContent = '전체 해제';
-  }
-  dUpdateCount();
-}
-
-function calculateDaily() {
-  const month = Number(document.getElementById('d-month').value.split('-')[1]);
-  const workedDays = dSelected.size;
-  const ratio = workedDays / D_BASE_DAYS;
-
-  const list = document.getElementById('d-result-list');
-  list.innerHTML = '';
-  const add = (label, val, cls) => list.insertAdjacentHTML('beforeend',
-    '<div class="result-row ' + (cls || '') + '"><span>' + label + '</span><span>' + val + '</span></div>');
-
-  add(month + '월 근무일 (기준 ' + D_BASE_DAYS + '일)', workedDays + '일');
-
-  const base = Number(document.getElementById('d-base').value.replace(/,/g, '')) || 0;
-  let total = Math.round(base * ratio);
-  add('기본급', fmt(total));
-
-  document.querySelectorAll('#d-items .item-row').forEach(row => {
-    const name = row.querySelector('.name').value.trim() || '수당';
-    const amt = Number(row.querySelector('.amount').value.replace(/,/g, '')) || 0;
-    if (amt === 0) return;
-    const p = Math.round(amt * ratio);
-    total += p;
-    add(name, fmt(p));
-  });
-
-  add(month + '월 급여', fmt(total), 'total');
-  document.getElementById('d-result').style.display = 'block';
-}
-
-// 일할계산기 초기화
-(function () {
-  const now = new Date();
-  const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const mi = document.getElementById('d-month');
-  mi.value = ym;
-  mi.addEventListener('change', buildCalDaily);
-  addAllowance('식대', '');
-  buildCalDaily();
-})();
 </script>
 
 </body>
