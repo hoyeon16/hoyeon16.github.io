@@ -691,8 +691,10 @@ function toggleAllDays() {
 }
 
 function calculateDaily() {
-  const month = Number(document.getElementById('d-month').value.split('-')[1]);
-  const workedDays = dSelected.size;
+  const [year, month] = document.getElementById('d-month').value.split('-').map(Number);
+  const totalInMonth = new Date(year, month, 0).getDate();   // 그 달 일수 (5월=31)
+  const absentDays = totalInMonth - dSelected.size;          // 체크 안 한 날 = 결근일수
+  const workedDays = Math.max(D_BASE_DAYS - absentDays, 0);  // 30일에서 결근일수만큼 차감
   const ratio = workedDays / D_BASE_DAYS;
 
   const list = document.getElementById('d-result-list');
