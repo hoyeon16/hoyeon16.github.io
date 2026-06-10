@@ -26,6 +26,51 @@ nav {
   margin-bottom: 28px;
 }
 
+/* 대분류 카테고리 버튼 */
+.cat-btn {
+  background: #1B4332;
+  border: none;
+  color: white;
+  padding: 16px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+}
+
+.cat-btn::after {
+  content: '▾';
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+}
+
+.cat-btn.open::after {
+  transform: rotate(180deg);
+}
+
+.cat-btn:hover {
+  background-color: #15372a;
+}
+
+/* 하위 메뉴 묶음 */
+.submenu {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 14px;
+  margin-top: -2px;
+}
+
+.submenu.open {
+  display: flex;
+}
+
 .nav-btn {
   background: white;
   border: 1px solid #ddd;
@@ -38,6 +83,7 @@ nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin: 0;
 }
 
 .nav-btn::after {
@@ -53,6 +99,7 @@ nav {
 }
 
 .nav-btn.active::after {
+  content: '▾';
   color: rgba(255,255,255,0.6);
 }
 
@@ -207,10 +254,19 @@ small {
 <body>
 
 <nav>
-  <button class="nav-btn" onclick="showPage('tax')">종합소득세 계산기</button>
-  <button class="nav-btn" onclick="showPage('leave')">연차수당 계산기</button>
-  <button class="nav-btn" onclick="showPage('retirement')">퇴직금 계산기</button>
-  <button class="nav-btn" onclick="showPage('daily')">월 급여 일할계산기</button>
+  <!-- 세무계산기 -->
+  <button class="cat-btn" id="catbtn-tax" onclick="toggleCat('tax')">세무계산기</button>
+  <div class="submenu" id="cat-tax">
+    <button class="nav-btn" id="navbtn-tax" onclick="togglePage('tax')">종합소득세 계산기</button>
+  </div>
+
+  <!-- 노무계산기 -->
+  <button class="cat-btn" id="catbtn-labor" onclick="toggleCat('labor')">노무계산기</button>
+  <div class="submenu" id="cat-labor">
+    <button class="nav-btn" id="navbtn-leave" onclick="togglePage('leave')">연차수당 계산기</button>
+    <button class="nav-btn" id="navbtn-retirement" onclick="togglePage('retirement')">퇴직금 계산기</button>
+    <button class="nav-btn" id="navbtn-daily" onclick="togglePage('daily')">월 급여 일할계산기</button>
+  </div>
 </nav>
 
 <!-- 종합소득세 계산기 -->
@@ -349,7 +405,7 @@ small {
 <div id="page-daily" style="display:none;">
   <div class="calc-card">
     <h1>월 급여 일할계산기</h1>
-    <p class="calc-subtitle">근무일수를 기준으로 급여를 일할 계산합니다 (30일 기준)</p>
+    <p class="calc-subtitle">급여를 일할 계산합니다 (해당 월 일수 기준 계산)</p>
     <form>
       <div>
         <label>계산 대상 월</label>
@@ -604,18 +660,44 @@ function calculateLeave() {
   document.getElementById('result-leave').style.display = 'block';
 }
 
-function showPage(page) {
-  document.getElementById('page-tax').style.display = page === 'tax' ? 'block' : 'none';
-  document.getElementById('page-leave').style.display = page === 'leave' ? 'block' : 'none';
-  document.getElementById('page-retirement').style.display = page === 'retirement' ? 'block' : 'none';
-  document.getElementById('page-daily').style.display = page === 'daily' ? 'block' : 'none';
-  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-    btn.classList.toggle('active',
-      (page === 'tax' && i === 0) ||
-      (page === 'leave' && i === 1) ||
-      (page === 'retirement' && i === 2) ||
-      (page === 'daily' && i === 3)
-    );
+// ===== 메뉴: 대분류 토글 =====
+function toggleCat(cat) {
+  const submenu = document.getElementById('cat-' + cat);
+  const willOpen = !submenu.classList.contains('open');
+
+  // 모든 하위 메뉴 / 카테고리 / 활성표시 / 펼쳐진 계산기 초기화
+  document.querySelectorAll('.submenu').forEach(s => s.classList.remove('open'));
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  hideAllPages();
+
+  // 닫혀 있던 카테고리면 펼치기 (열려 있었으면 그대로 접힌 상태 유지)
+  if (willOpen) {
+    submenu.classList.add('open');
+    document.getElementById('catbtn-' + cat).classList.add('open');
+  }
+}
+
+// ===== 메뉴: 계산기 펼치기 / 접기 (토글) =====
+const PAGES = ['tax', 'leave', 'retirement', 'daily'];
+
+function togglePage(page) {
+  const el = document.getElementById('page-' + page);
+  const isVisible = el.style.display === 'block';
+
+  hideAllPages();
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  // 이미 열려 있던 계산기를 다시 누르면 접힌 채로 종료
+  if (!isVisible) {
+    el.style.display = 'block';
+    document.getElementById('navbtn-' + page).classList.add('active');
+  }
+}
+
+function hideAllPages() {
+  PAGES.forEach(p => {
+    document.getElementById('page-' + p).style.display = 'none';
   });
 }
 
