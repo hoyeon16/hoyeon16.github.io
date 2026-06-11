@@ -450,19 +450,17 @@ small {
     <p class="calc-subtitle">근로소득 간이세액표 기준으로 월 실수령액을 계산합니다</p>
     <form>
       <div>
-        <label>부양가족수</label>
-        <small>본인 제외 (0~10명)</small>
-        <input type="text" id="p-family" placeholder="예: 0" oninput="fmtUnit(this, '명')" />
+        <label>기본급</label>
+        <input type="text" id="p-base" oninput="fmtInput(this)" />
       </div>
       <div>
-        <label>기본급 (과세)</label>
-        <input type="text" id="p-base" placeholder="예: 1,500,000" oninput="fmtInput(this)" />
-      </div>
-      <div>
-        <label>급여 외 수당</label>
-        <small>리스트에서 선택 (식대 등은 비과세, 상여 등은 과세)</small>
+        <label>기본급 외</label>
         <div id="p-items" style="display:flex; flex-direction:column; gap:8px; margin:8px 0;"></div>
         <button type="button" class="add-btn" onclick="pAddAllowance()">+ 수당 추가</button>
+      </div>
+      <div>
+        <label>부양가족수</label>
+        <input type="text" id="p-family"oninput="fmtUnit(this, '명')" />
       </div>
       <button type="button" onclick="calculatePayroll()">계산하기</button>
     </form>
@@ -851,7 +849,7 @@ const PAY_ALLOWANCES = [
   { name: '보육수당', taxable: false },
   { name: '상여', taxable: true },
   { name: '직책수당', taxable: true },
-  { name: '기타수당(과세)', taxable: true }
+  { name: '기타수당', taxable: true }
 ];
 
 function pAddAllowance(selectedName) {
