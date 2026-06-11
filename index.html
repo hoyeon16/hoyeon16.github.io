@@ -228,6 +228,8 @@ small {
 /* 월 급여 일할계산기 */
 .item-row { display: flex; gap: 8px; align-items: center; }
 .item-row .name { flex: 1.2; text-align: left; }
+.item-row select.name { height: 3rem; padding: 0 10px; font-size: 0.95rem; border: 1px solid #ddd; border-radius: 10px; background: #f9f9f9; color: #333; }
+.item-row select.name:focus { outline: none; border-color: #1B4332; background: white; }
 .item-row .amount { flex: 1; }
 .item-row .del { flex: 0 0 44px; width: 44px; height: 3rem; padding: 0; margin: 0; background: #f9f9f9; color: #999; border: 1px solid #ddd; border-radius: 10px; font-size: 1.3rem; font-weight: 400; }
 .item-row .del:hover { background: #fde8e8; color: #c0392b; }
@@ -445,21 +447,22 @@ small {
 <div id="page-payroll" style="display:none;">
   <div class="calc-card">
     <h1>월 실수령액 계산기</h1>
-    <p class="calc-subtitle">월 급여 실수령액을 계산합니다</p>
+    <p class="calc-subtitle">근로소득 간이세액표 기준으로 월 실수령액을 계산합니다</p>
     <form>
       <div>
         <label>부양가족수</label>
-        <input type="text" id="p-family" oninput="fmtUnit(this, '명')" />
+        <small>본인 제외 (0~10명)</small>
+        <input type="text" id="p-family" placeholder="예: 0" oninput="fmtUnit(this, '명')" />
       </div>
       <div>
         <label>기본급 (과세)</label>
-        <input type="text" id="p-base" oninput="fmtInput(this)" />
+        <input type="text" id="p-base" placeholder="예: 1,500,000" oninput="fmtInput(this)" />
       </div>
       <div>
-        <label>비과세 수당</label>
-        <small>식대 등 비과세 항목</small>
+        <label>급여 외 수당</label>
+        <small>리스트에서 선택 (식대 등은 비과세, 상여 등은 과세)</small>
         <div id="p-items" style="display:flex; flex-direction:column; gap:8px; margin:8px 0;"></div>
-        <button type="button" class="add-btn" onclick="pAddAllowance()">+ 항목 추가</button>
+        <button type="button" class="add-btn" onclick="pAddAllowance()">+ 수당 추가</button>
       </div>
       <button type="button" onclick="calculatePayroll()">계산하기</button>
     </form>
@@ -841,15 +844,28 @@ function calculateDaily() {
 }
 
 // ===== 월 실수령액 계산기 (소득세: 근로소득 간이세액표 기준) =====
-function pAddAllowance(name, amount) {
+// 급여 외 수당 리스트 (taxable: 과세 여부)
+const PAY_ALLOWANCES = [
+  { name: '식대', taxable: false },
+  { name: '자가운전보조금', taxable: false },
+  { name: '보육수당', taxable: false },
+  { name: '상여', taxable: true },
+  { name: '직책수당', taxable: true },
+  { name: '기타수당(과세)', taxable: true }
+];
+
+function pAddAllowance(selectedName) {
   const row = document.createElement('div');
   row.className = 'item-row';
+  const opts = PAY_ALLOWANCES.map((a, i) =>
+    '<option value="' + i + '" data-taxable="' + a.taxable + '"' +
+    (a.name === selectedName ? ' selected' : '') + '>' +
+    a.name + ' (' + (a.taxable ? '과세' : '비과세') + ')</option>'
+  ).join('');
   row.innerHTML =
-    '<input type="text" class="name" placeholder="항목명 (예: 식대)" />' +
+    '<select class="name">' + opts + '</select>' +
     '<input type="text" class="amount" placeholder="금액" oninput="fmtInput(this)" />' +
     '<button type="button" class="del" onclick="this.parentElement.remove()">&times;</button>';
-  if (name) row.querySelector('.name').value = name;
-  if (amount) row.querySelector('.amount').value = amount;
   document.getElementById('p-items').appendChild(row);
 }
 
@@ -888,14 +904,17 @@ function calculatePayroll() {
   const dependents = Number(document.getElementById('p-family').value.replace(/[^0-9]/g, '')) || 0;
   if (base <= 0) { alert('기본급(과세)을 입력해주세요.'); return; }
 
-  // 비과세 합계
-  let nonTaxSum = 0;
+  // 급여 외 수당: 과세/비과세 분리
+  let taxAllow = 0, nonTaxAllow = 0;
   document.querySelectorAll('#p-items .item-row').forEach(row => {
-    nonTaxSum += Number(row.querySelector('.amount').value.replace(/,/g, '')) || 0;
+    const sel = row.querySelector('.name');
+    const amt = Number(row.querySelector('.amount').value.replace(/,/g, '')) || 0;
+    const isTaxable = sel.options[sel.selectedIndex].dataset.taxable === 'true';
+    if (isTaxable) taxAllow += amt; else nonTaxAllow += amt;
   });
 
-  const taxableSum = base;                  // 과세 월급여 (간이세액표 조회 기준)
-  const totalPay = taxableSum + nonTaxSum;  // 전체 급여
+  const taxableSum = base + taxAllow;          // 과세 월급여 = 기본급 + 과세수당
+  const totalPay = taxableSum + nonTaxAllow;   // 전체 급여
 
   // 4대보험 (월 과세급여 기준)
   const pension = rd10(taxableSum * 0.0475);   // 국민연금
@@ -935,7 +954,7 @@ function calculatePayroll() {
   buildCalDaily();
 
   // 실수령액 계산기
-  pAddAllowance('식대', '');
+  pAddAllowance('식대');
 })();
 </script>
 
