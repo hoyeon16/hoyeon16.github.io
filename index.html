@@ -92,15 +92,16 @@ nav {
   font-size: 0.9rem;
 }
 
+/* 하위메뉴 선택 시: 대분류(진한 초록)와 구별되는 연한 녹색 */
 .nav-btn.active {
-  background-color: #2b6b51;
-  color: white;
-  border-color: #1B4332;
+  background-color: #95D5B2;
+  color: #1B4332;
+  border-color: #95D5B2;
 }
 
 .nav-btn.active::after {
   content: '▾';
-  color: rgba(255,255,255,0.6);
+  color: rgba(27,67,50,0.5);
 }
 
 .nav-btn:hover:not(.active) {
@@ -160,7 +161,7 @@ input:focus {
   background: white;
 }
 
-input[type="date"] {
+input[type="date"], input[type="month"] {
   text-align: left;
   padding: 0 12px;
 }
@@ -266,6 +267,7 @@ small {
     <button class="nav-btn" id="navbtn-leave" onclick="togglePage('leave')">연차수당 계산기</button>
     <button class="nav-btn" id="navbtn-retirement" onclick="togglePage('retirement')">퇴직금 계산기</button>
     <button class="nav-btn" id="navbtn-daily" onclick="togglePage('daily')">월 급여 일할계산기</button>
+    <button class="nav-btn" id="navbtn-payroll" onclick="togglePage('payroll')">급여 실수령액 계산기</button>
   </div>
 </nav>
 
@@ -435,6 +437,55 @@ small {
     <div class="result-section" id="d-result" style="display:none;">
       <p class="result-label">계산 결과</p>
       <div class="result-list" id="d-result-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 월 실수령액 계산기 -->
+<div id="page-payroll" style="display:none;">
+  <div class="calc-card">
+    <h1>월 실수령액 계산기</h1>
+    <p class="calc-subtitle">4대보험·소득세를 공제한 월 실수령액을 계산합니다</p>
+    <form>
+      <div>
+        <label>급여 월</label>
+        <input type="month" id="p-month" />
+      </div>
+      <div>
+        <label>입사일</label>
+        <input type="date" id="p-join" />
+      </div>
+      <div>
+        <label>부양가족수</label>
+        <small>본인 제외. 추가 공제 대상 가족 수</small>
+        <input type="text" id="p-dependents"oninput="fmtUnit(this, '명')" />
+      </div>
+      <div>
+        <label>기본급 (과세)</label>
+        <input type="text" id="p-base" oninput="fmtInput(this)" />
+      </div>
+      <div>
+        <label>비과세 수당</label>
+        <small>식대 등 비과세 항목</small>
+        <div id="p-items" style="display:flex; flex-direction:column; gap:8px; margin:8px 0;"></div>
+        <button type="button" class="add-btn" onclick="pAddAllowance()">+ 항목 추가</button>
+      </div>
+      <button type="button" onclick="calculatePayroll()">계산하기</button>
+    </form>
+    <div class="result-section" id="p-result" style="display:none;">
+      <p class="result-label">계산 결과</p>
+      <div class="result-list">
+        <div class="result-row"><span>근속월수</span><span id="p-months"></span></div>
+        <div class="result-row"><span>전체 급여</span><span id="p-total-pay"></span></div>
+        <div class="result-row"><span>국민연금</span><span id="p-pension"></span></div>
+        <div class="result-row"><span>건강보험</span><span id="p-health"></span></div>
+        <div class="result-row"><span>장기요양보험</span><span id="p-care"></span></div>
+        <div class="result-row"><span>고용보험</span><span id="p-employ"></span></div>
+        <div class="result-row"><span>소득세</span><span id="p-income-tax"></span></div>
+        <div class="result-row"><span>지방세</span><span id="p-local-tax"></span></div>
+        <div class="result-row highlight"><span>공제 합계</span><span id="p-ded-total"></span></div>
+        <div class="result-row total"><span>실수령액</span><span id="p-net"></span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -665,13 +716,11 @@ function toggleCat(cat) {
   const submenu = document.getElementById('cat-' + cat);
   const willOpen = !submenu.classList.contains('open');
 
-  // 모든 하위 메뉴 / 카테고리 / 활성표시 / 펼쳐진 계산기 초기화
   document.querySelectorAll('.submenu').forEach(s => s.classList.remove('open'));
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('open'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   hideAllPages();
 
-  // 닫혀 있던 카테고리면 펼치기 (열려 있었으면 그대로 접힌 상태 유지)
   if (willOpen) {
     submenu.classList.add('open');
     document.getElementById('catbtn-' + cat).classList.add('open');
@@ -679,7 +728,7 @@ function toggleCat(cat) {
 }
 
 // ===== 메뉴: 계산기 펼치기 / 접기 (토글) =====
-const PAGES = ['tax', 'leave', 'retirement', 'daily'];
+const PAGES = ['tax', 'leave', 'retirement', 'daily', 'payroll'];
 
 function togglePage(page) {
   const el = document.getElementById('page-' + page);
@@ -688,7 +737,6 @@ function togglePage(page) {
   hideAllPages();
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
-  // 이미 열려 있던 계산기를 다시 누르면 접힌 채로 종료
   if (!isVisible) {
     el.style.display = 'block';
     document.getElementById('navbtn-' + page).classList.add('active');
@@ -802,15 +850,139 @@ function calculateDaily() {
   document.getElementById('d-result').style.display = 'block';
 }
 
-// 일할계산기 초기화
+// ===== 월 실수령액 계산기 (엑셀 수식 그대로 이식) =====
+function pAddAllowance(name, amount) {
+  const row = document.createElement('div');
+  row.className = 'item-row';
+  row.innerHTML =
+    '<input type="text" class="name" placeholder="항목명 (예: 식대)" />' +
+    '<input type="text" class="amount" placeholder="금액" oninput="fmtInput(this)" />' +
+    '<button type="button" class="del" onclick="this.parentElement.remove()">&times;</button>';
+  if (name) row.querySelector('.name').value = name;
+  if (amount) row.querySelector('.amount').value = amount;
+  document.getElementById('p-items').appendChild(row);
+}
+
+// ROUNDDOWN(x, -1) : 10원 단위 절사
+function rd10(x) { return Math.floor(x / 10) * 10; }
+
+// DATEDIF "m" : 두 날짜 사이의 '완전한' 개월 수
+function datedifMonths(d1, d2) {
+  let m = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+  if (d2.getDate() < d1.getDate()) m--;
+  return m;
+}
+
+function calculatePayroll() {
+  const mv = document.getElementById('p-month').value;       // "YYYY-MM"
+  const joinStr = document.getElementById('p-join').value;   // "YYYY-MM-DD"
+  if (!mv || !joinStr) { alert('급여 월과 입사일을 입력해주세요.'); return; }
+
+  const [year, month] = mv.split('-').map(Number);
+  const dependents = Number(document.getElementById('p-dependents').value.replace(/[^0-9]/g, '')) || 0;
+  const base = Number(document.getElementById('p-base').value.replace(/,/g, '')) || 0;
+
+  // 비과세 합계 (C14)
+  let nonTaxSum = 0;
+  document.querySelectorAll('#p-items .item-row').forEach(row => {
+    nonTaxSum += Number(row.querySelector('.amount').value.replace(/,/g, '')) || 0;
+  });
+
+  const taxableSum = base;                    // 과세 합계 (C13)
+  const totalPay = taxableSum + nonTaxSum;    // 전체 합계 (C15)
+
+  // 날짜
+  const yearStart = new Date(year, 0, 1);     // D1 = 1월 1일
+  const monthEnd = new Date(year, month, 0);  // E2 = 해당 월 말일
+  const join = new Date(joinStr);
+
+  // 근속월수 (C17)
+  let months;
+  if (join > yearStart) months = datedifMonths(join, monthEnd) + 1;
+  else months = datedifMonths(yearStart, monthEnd) + 1;
+
+  // 과세총급여 (C20) = 월 과세급여 × 근속월수
+  const a = taxableSum * months;
+
+  // 근로소득공제 (C22)
+  let earnedDed;
+  if (a <= 5000000) earnedDed = a * 0.70;
+  else if (a <= 15000000) earnedDed = 3500000 + (a - 5000000) * 0.40;
+  else if (a <= 45000000) earnedDed = 7500000 + (a - 15000000) * 0.15;
+  else if (a <= 100000000) earnedDed = 12000000 + (a - 45000000) * 0.05;
+  else if (a <= 362500000) earnedDed = 14750000 + (a - 100000000) * 0.02;
+  else earnedDed = 20000000;
+
+  // 소득공제 (C23) = 150만 × (1 + 부양가족수)
+  const incomeDed = dependents > 0 ? 1500000 + 1500000 * dependents : 1500000;
+
+  // 과세표준 (C24) - 음수면 0 (세금은 마이너스가 될 수 없음)
+  const taxBase = Math.max(0, a - earnedDed - incomeDed);
+
+  // 산출세액 (C26) - 연 기준
+  const t = taxBase;
+  let annualTax;
+  if (t <= 14000000) annualTax = t * 0.06;
+  else if (t <= 50000000) annualTax = 840000 + (t - 14000000) * 0.15;
+  else if (t <= 88000000) annualTax = 6240000 + (t - 50000000) * 0.24;
+  else if (t <= 150000000) annualTax = 15360000 + (t - 88000000) * 0.35;
+  else if (t <= 300000000) annualTax = 37060000 + (t - 150000000) * 0.38;
+  else if (t <= 500000000) annualTax = 94060000 + (t - 300000000) * 0.40;
+  else if (t <= 1000000000) annualTax = 174060000 + (t - 500000000) * 0.42;
+  else annualTax = 384060000 + (t - 1000000000) * 0.45;
+
+  // 근로소득세액공제 한도 (C27)
+  let creditLimit;
+  if (a <= 33000000) creditLimit = 740000;
+  else if (a <= 70000000) creditLimit = Math.max(740000 - (a - 33000000) * 0.008, 660000);
+  else if (a <= 120000000) creditLimit = Math.max(660000 - (a - 70000000) / 2, 500000);
+  else creditLimit = Math.max(500000 - (a - 120000000) / 2, 200000);
+
+  // 근로소득세액공제 (C28)
+  let credit = annualTax <= 1300000 ? annualTax * 0.55 : (annualTax - 1300000) * 0.30 + 715000;
+  if (credit > creditLimit) credit = creditLimit;
+
+  // 4대보험 (월 과세급여 기준)
+  const pension = rd10(taxableSum * 0.0475);   // 국민연금 (C30)
+  const health = rd10(taxableSum * 0.03595);   // 건강보험 (C31)
+  const care = rd10(health * 0.1314);          // 장기요양보험 (C32)
+  const employ = rd10(taxableSum * 0.009);     // 고용보험 (C33)
+  const incomeTax = rd10((annualTax - credit) / months);     // 소득세 (C34)
+  const localTax = rd10(Math.floor(incomeTax * 0.1));        // 지방세 (C35)
+
+  const dedTotal = pension + health + care + employ + incomeTax + localTax;  // 공제합계 (C36)
+  const netPay = totalPay - dedTotal;          // 실수령액 (C38)
+
+  // 출력
+  document.getElementById('p-months').textContent = months + '개월';
+  document.getElementById('p-total-pay').textContent = fmt(totalPay);
+  document.getElementById('p-pension').textContent = fmt(pension);
+  document.getElementById('p-health').textContent = fmt(health);
+  document.getElementById('p-care').textContent = fmt(care);
+  document.getElementById('p-employ').textContent = fmt(employ);
+  document.getElementById('p-income-tax').textContent = fmt(incomeTax);
+  document.getElementById('p-local-tax').textContent = fmt(localTax);
+  document.getElementById('p-ded-total').textContent = fmt(dedTotal);
+  document.getElementById('p-net').textContent = fmt(netPay);
+
+  document.getElementById('p-result').style.display = 'block';
+}
+
+// 초기화
 (function () {
   const now = new Date();
   const ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+  // 일할계산기
   const mi = document.getElementById('d-month');
   mi.value = ym;
   mi.addEventListener('change', buildCalDaily);
   addAllowance('식대', '');
   buildCalDaily();
+
+  // 실수령액 계산기
+  document.getElementById('p-month').value = ym;
+  pAddAllowance('식대', '');
 })();
 </script>
 
