@@ -807,7 +807,7 @@ function addAllowance(name, amount) {
   const row = document.createElement('div');
   row.className = 'item-row';
   row.innerHTML =
-    '<input type="text" class="name" placeholder="항목명 (예: 식대)" />' +
+    '<input type="text" class="name"  />' +
     '<input type="text" class="amount" placeholder="금액" oninput="fmtInput(this)" />' +
     '<button type="button" class="del" onclick="this.parentElement.remove()">&times;</button>';
   if (name) row.querySelector('.name').value = name;
