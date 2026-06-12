@@ -254,12 +254,16 @@ small {
 
 /* 월 급여 일할계산기 */
 .item-row { display: flex; gap: 8px; align-items: center; }
-.item-row .name { flex: 1.2; text-align: left; }
+#p-items .item-row .name { flex: 1; min-width: 0; } /*기타수당 글자길이조정*/
 .item-row select.name { height: 3rem; padding: 0 10px; font-size: 0.95rem; border: 1px solid #ddd; border-radius: 10px; background: #f9f9f9; color: #333; }
 .item-row select.name:focus { outline: none; border-color: #1B4332; background: white; }
 .item-row .amount { flex: 1; }
 .item-row .del { flex: 0 0 44px; width: 44px; height: 3rem; padding: 0; margin: 0; background: #f9f9f9; color: #999; border: 1px solid #ddd; border-radius: 10px; font-size: 1.3rem; font-weight: 400; }
 .item-row .del:hover { background: #fde8e8; color: #c0392b; }
+/* 월 실수령액 계산기: 추가수당 칸 조정 */
+#p-items .item-row .del { flex: 0 0 25px; width: 25px; font-size: 0.8rem; }
+#p-items .item-row .name { flex: 1; }
+#p-items .item-row .amount { flex: 1.5; padding: 0 10px; }
 .add-btn { background: #e8f5ee; color: #1B4332; border: 1px dashed #1B4332; padding: 11px; border-radius: 10px; font-size: 0.9rem; margin: 0; }
 .add-btn:hover { background: #dcefe3; }
 .cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -279,14 +283,15 @@ small {
 .cal-day:not(.empty):not(.on):hover { background: #f0f0f0; }
 
 
-/* 월 실수령액 계산기: 삭제 버튼 작게 + 금액칸 넓게 */
-#p-items .item-row .del { flex: 0 0 25px; width: 25px; font-size: 1.1rem; }
-#p-items .item-row .name { flex: 0.6; }
-#p-items .item-row .amount { flex: 1.9; padding: 0 10px; }
+
 
 
 
   </style>
+
+
+
+
 </head>
 
 <body>
