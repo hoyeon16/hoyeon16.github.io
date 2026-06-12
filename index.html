@@ -254,9 +254,15 @@ small {
 .result-row.total { background: #1B4332; margin-top: 4px; }
 .result-row.total span { color: white !important; font-weight: 600; }
 
+/* 실수령액 결과창: 전체 급여 강조 + 그룹 구분 여백 */
+#p-result .result-list .result-row:first-child { font-size: 1.05rem; margin-bottom: 12px; }
+#p-result .result-list .result-row:first-child span { font-weight: 600; color: #0e291e; }
+#p-result .result-list .result-row:nth-child(5) { margin-bottom: 10px; }
+#p-result .result-list .result-row.highlight { margin-top: 8px; }
+
 /* 월 급여 일할계산기 */
 .item-row { display: flex; gap: 8px; align-items: center; }
-#p-items .item-row .name { flex: 1.1; min-width: 0; } /*기타수당 글자길이조정*/
+#p-items .item-row .name { flex: 1.1; min-width: 0; }
 .item-row select.name { height: 3rem; padding: 0 10px; font-size: 0.95rem; border: 1px solid #ddd; border-radius: 10px; background: #f9f9f9; color: #333; }
 .item-row select.name:focus { outline: none; border-color: #1B4332; background: white; }
 .item-row .amount { flex: 1; }
@@ -285,6 +291,12 @@ small {
 .cal-day:not(.empty):not(.on):hover { background: #f0f0f0; }
 
 
+
+
+/* 월 급여 일할계산기: 수당명 좁게, 금액 넓게 */
+#d-items .item-row .name { flex: 0.9; text-align: left; min-width: 0; }
+#d-items .item-row .amount { flex: 1.6; }
+#d-items .item-row .del { flex: 0 0 44px; width: 44px; font-size: 1.3rem; }
 
 
 
